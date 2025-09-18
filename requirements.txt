@@ -1,0 +1,19 @@
+# Bank Statement Processor Dependencies
+
+# Core GUI Framework
+PyQt6
+
+# Data Processing
+pandas
+openpyxl  # For Excel file handling
+
+# AI Integration
+google-generativeai
+
+# Standard library modules (no installation needed):
+# - sys
+# - os
+# - logging
+# - threading
+# - io
+# - typing

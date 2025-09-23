@@ -32,13 +32,41 @@ Extraction Details:
 - Month: Use the numeric value for the month (e.g., 1 for January, 2 for February), based on the transaction date.
 - Date: Format as DD-MM-YYYY.
 - Narration: Extract narration as given. If narration is multiline or lengthy, merge lines into a single space and eliminate extra breaks.
--Chq Ref: Cheq number if mentioned in the statement otherwise leave blank
+- Chq Ref: Cheq number if mentioned in the statement otherwise leave blank
 - Withdrawal Amount, Deposit Amount, Balance: Use numeric values. If any of these are not present, enter either 0 or leave blank exactly as shown in the source statement. Do not omit rows with zero values.
 - Net(Cr-Dr): Negative withdrawal amount for withdrawals; positive deposit amount for deposits; use 0 or leave blank if both values are missing or zero.
 - Name: Extract involved party's name from narration if possible; use 'suspense' if unidentifiable.
 - Ledger: Assign ledger based on narration if clear, otherwise use 'suspense'.
 - Group: Assign a relevant group such as Direct Expenses, Indirect Expenses, Purchase Accounts, Finance Expenses, or Sales Accounts; use 'suspense' if not mappable.
-"""
+
+Required Behaviors:
+- The column order is such that withdrwal column comes before deposit column. In cases where the header of the columns is not there in the pdf file and you parse keep in mind that if there are two columns one empty and one with amount or vice versa, the first one is withdrwal and the second one is deposit
+- Use the specified column order for every row.
+- First row should necessarily be the column headers
+- For missing or unidentifiable Name, Ledger, or Group, set column value as 'suspense'.
+- Remove duplicate or incomplete transactions (missing Date, Amounts, or Narration). Only output complete and non-duplicate entries.
+- Do not hallucinate or omit transactions except per the above guidelines.
+- Output ONLY plain CSV text: absolutely no explanations, headers, markdown, or formatting identifiers.
+
+CSV Schema Reference:
+- FY: string (e.g. 2023-2024, 2024-2025)
+- Month: string, number (e.g., 1, 2)
+- Date: string, 'DD-MM-YYYY'
+- Narration: string, single line
+- Chq Ref: string, number, blank if missing
+- Withdrawal Amount: decimal (e.g., 1000.00), 0 or blank if missing
+- Deposit Amount: decimal (e.g., 500.00), 0 or blank if missing
+- Balance: decimal (e.g., 12000.00), 0 or blank if missing
+- Net(Cr-Dr): decimal (e.g., 500.00 / -1000.00), 0 or blank if not applicable
+- Name: string, or 'Suspense' if not identifiable
+- Ledger: string, or 'Suspense' if not identifiable
+- Group: string, or 'Suspense' if not assignable
+
+Example (omit header):
+04,2023-04-07,POS 123456 ABC STORE,-2500.00,,77544.00,-2500.00,ABC STORE,suspense,Direct Expenses
+04,2023-04-09,NEFT FROM XYZ CORP,,5000.00,82544.00,5000.00,XYZ CORP,NEFT,Sales Accounts
+
+After extraction, quickly validate that all required columns are present in every row, column order is never violated, and no explanations or extraneous formatting appear in the output. If validation fails, self-correct and regenerate a compliant CSV."""
 
 # ------------------------
 # COLUMN MAPPINGS

@@ -18,15 +18,33 @@ class DataProcessor:
     def csv_to_dataframe(csv_text):
         """
         Convert CSV text to pandas DataFrame
-        
+
         Args:
             csv_text (str): Raw CSV text
-            
+
         Returns:
             pd.DataFrame: Processed DataFrame
         """
         try:
-            df = pd.read_csv(StringIO(csv_text))
+            # --- Add header trimming logic ---
+            lines = csv_text.strip().splitlines()
+            header_idx = None
+            for i, ln in enumerate(lines):
+                if ln.strip().startswith("FY") or "FY" in ln.split(",")[0]:
+                    header_idx = i
+                    break
+                if ln.strip().lower().startswith("fy"):
+                    header_idx = i
+                    break
+            if header_idx is not None and header_idx > 0:
+                logging.info("Detected non-csv preface; trimming lines before header (line %d)", header_idx)
+                csv_text = "\n".join(lines[header_idx:])
+
+            df = pd.read_csv(
+                StringIO(csv_text),
+                on_bad_lines=lambda x: print(f"Bad line: {x}"),
+                engine='python'
+            )
             return df
         except pd.errors.EmptyDataError:
             raise Exception("No data found in CSV")

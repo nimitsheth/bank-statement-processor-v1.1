@@ -43,7 +43,8 @@ class GeminiService:
             generation_config={
                 "temperature": self.temperature,
                 "top_p": 1,
-                "top_k": 40
+                "top_k": 40,
+                # "max_output_tokens": 1024
             }
         )
         
@@ -56,7 +57,7 @@ class GeminiService:
         logging.info("Calling Gemini model.generate_content with %d payload items", len(payload))
         response = model.generate_content(payload)
         logging.info("Gemini response received")
-        
+        # logging.info("Gemini response: %s", response.text)
         return response.text
     
     def _upload_files(self, file_paths):

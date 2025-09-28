@@ -71,29 +71,42 @@ After extraction, quickly validate that all required columns are present in ever
 # ------------------------
 # COLUMN MAPPINGS
 # ------------------------
-COLUMN_MAP = {
-    "date": "Date",
-    "txn date": "Date",
-    "value date": "Date",
+# Target patterns for each column type
+TARGET_PATTERNS = {
+    "Date": [
+        "date", "transaction date", "tran date", "txn date", "value date", 
+        "posting date", "trans date", "dt", "dated", "transaction dt",
+        "value dt", "posting dt", "effective date", "process date"
+    ],
+    "Narration": [
+        "narration", "description", "particulars", "details", "remarks",
+        "transaction details", "txn details", "reference", "purpose",
+        "memo", "note", "comment", "remark", "transaction description"
+    ],
+    "Withdrawal Amount": [
+        "withdrawal", "debit", "debit amount", "paid out", "dr amount", 
+        "withdraw", "withdrawal amt", "debit amt", "paid", "outgoing",
+        "payment", "debited", "withdrawn", "dr", "debit bal", "expense"
+    ],
+    "Deposit Amount": [
+        "deposit", "credit", "credit amount", "received", "cr amount", 
+        "credited", "deposit amt", "credit amt", "incoming", "receipt",
+        "income", "cr", "credit bal", "deposited", "received amt"
+    ],
+    "Balance": [
+        "balance", "closing balance", "running balance", "available balance", 
+        "bal", "closing bal", "available bal", "current balance",
+        "outstanding balance", "account balance", "total balance"
+    ]
+}
 
-    "narration": "Narration",
-    "description": "Narration",
-    "details": "Narration",
-
-    "cheque": "Chq Ref",
-    "chq no": "Chq Ref",
-    "reference": "Chq Ref",
-
-    "withdrawal": "Withdrawal Amount",
-    "debit": "Withdrawal Amount",
-    "dr": "Withdrawal Amount",
-
-    "deposit": "Deposit Amount",
-    "credit": "Deposit Amount",
-    "cr": "Deposit Amount",
-
-    "balance": "Balance",
-    "closing balance": "Balance"
+# Abbreviation expansion dictionary
+ABBREVIATIONS = {
+    "tran": "transaction", "txn": "transaction", "dt": "date",
+    "amt": "amount", "bal": "balance", "dr": "debit", "cr": "credit",
+    "recv": "received", "avail": "available", "curr": "current",
+    "acc": "account", "trans": "transaction", "dep": "deposit",
+    "with": "withdrawal", "outst": "outstanding", "clos": "closing"
 }
 
 GENERALIZED_COLUMNS = [

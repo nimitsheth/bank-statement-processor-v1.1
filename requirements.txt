@@ -5,10 +5,14 @@ PyQt6
 
 # Data Processing
 pandas
-openpyxl  # For Excel file handling
+openpyxl
+xlrd  # For Excel file handling
 
 # AI Integration
 google-generativeai
+
+# ML Library
+scikit-learn
 
 # Standard library modules (no installation needed):
 # - sys

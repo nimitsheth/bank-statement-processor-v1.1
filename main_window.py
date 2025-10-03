@@ -17,6 +17,7 @@ from config import STYLE_SHEET, WINDOW_TITLE, MIN_WINDOW_SIZE, GEMINI_PROMPT
 from ui_components import LoaderWidget, WorkerThread
 from file_handler import FileHandler
 from data_processor import DataProcessor
+from textract_service import TextractService
 from gemini_service import GeminiService
 
 
@@ -31,6 +32,7 @@ class BankStatementProcessor(QMainWindow):
         
         # Initialize services
         self.gemini_service = GeminiService()
+        self.textract_service = TextractService()
         self.file_handler = FileHandler()
         self.data_processor = DataProcessor()
         
@@ -313,7 +315,7 @@ class BankStatementProcessor(QMainWindow):
             if input_type == "excel":
                 process_func = self.data_processor.process_excel_file
             else:
-                process_func = self._process_with_gemini
+                process_func = self._process_with_textract
 
             # Create and start worker thread
             self.worker = WorkerThread(process_func, file_input)
@@ -330,19 +332,21 @@ class BankStatementProcessor(QMainWindow):
                 f"Error starting processing:\n{str(e)}"
             )
 
-    def _process_with_gemini(self, file_input):
-        """Process files using Gemini AI service"""
+    def _process_with_textract(self, file_input):
+        """Process files using AWS Textract Service service"""
         try:
             # Get response from Gemini
-            csv_text = self.gemini_service.send_to_gemini(file_input, GEMINI_PROMPT)
+            # csv_text = self.gemini_service.send_to_gemini(file_input, GEMINI_PROMPT)
+            csv_text = self.textract_service.process_file(file_input)
             
             # Parse CSV text into DataFrame
-            df = self.data_processor.csv_to_dataframe(csv_text)
+            df = None
+            # df = self.data_processor.csv_to_dataframe(csv_text)
             return df
             
         except Exception as e:
-            logging.error("Error processing with Gemini: %s", str(e))
-            raise Exception(f"Error processing with Gemini: {str(e)}")
+            logging.error("Error processing with Textract: %s", str(e))
+            raise Exception(f"Error processing with Textract: {str(e)}")
 
     def handle_processing_complete(self, df):
         """Handle successful processing completion"""

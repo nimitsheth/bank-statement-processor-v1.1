@@ -69,6 +69,12 @@ Example (omit header):
 After extraction, quickly validate that all required columns are present in every row, column order is never violated, and no explanations or extraneous formatting appear in the output. If validation fails, self-correct and regenerate a compliant CSV."""
 
 # ------------------------
+# AWS Configuration
+# ------------------------
+AWS_PROFILE = "nimit_sheth"
+AWS_REGION = "ap-south-1"
+
+# ------------------------
 # COLUMN MAPPINGS
 # ------------------------
 # Target patterns for each column type

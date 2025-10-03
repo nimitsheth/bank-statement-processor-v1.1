@@ -14,6 +14,12 @@ google-generativeai
 # ML Library
 scikit-learn
 
+# AWS Textract for OCR
+boto3
+
+# PDF Handling
+pdf2image
+
 # Standard library modules (no installation needed):
 # - sys
 # - os

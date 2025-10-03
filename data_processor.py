@@ -10,8 +10,8 @@ from io import StringIO
 import re
 import numpy as np
 from PyQt6.QtWidgets import QMessageBox
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+# from sklearn.feature_extraction.text import TfidfVectorizer
+# from sklearn.metrics.pairwise import cosine_similarity
 from config import TARGET_PATTERNS, ABBREVIATIONS, GENERALIZED_COLUMNS
 
 
@@ -118,54 +118,56 @@ class DataProcessor:
         Returns:
             tuple: (best_match_column, similarity_score) or (None, 0) if no match
         """
-        if not excel_columns:
-            return None, 0
+        return None, 0  # Placeholder for actual implementation
+    #     if not target_column or not patterns:
+    #     if not excel_columns:
+    #         return None, 0
         
-        # Preprocess Excel columns
-        processed_excel_cols = [DataProcessor.preprocess_column_name(col) for col in excel_columns]
+    #     # Preprocess Excel columns
+    #     processed_excel_cols = [DataProcessor.preprocess_column_name(col) for col in excel_columns]
         
-        # Filter out empty column names
-        valid_indices = [i for i, col in enumerate(processed_excel_cols) if col.strip()]
-        if not valid_indices:
-            return None, 0
+    #     # Filter out empty column names
+    #     valid_indices = [i for i, col in enumerate(processed_excel_cols) if col.strip()]
+    #     if not valid_indices:
+    #         return None, 0
         
-        valid_excel_cols = [processed_excel_cols[i] for i in valid_indices]
-        valid_original_cols = [excel_columns[i] for i in valid_indices]
+    #     valid_excel_cols = [processed_excel_cols[i] for i in valid_indices]
+    #     valid_original_cols = [excel_columns[i] for i in valid_indices]
         
-        # Create corpus: Excel columns + target patterns
-        corpus = valid_excel_cols + patterns
+    #     # Create corpus: Excel columns + target patterns
+    #     corpus = valid_excel_cols + patterns
         
-        try:
-            # Create TF-IDF vectors
-            vectorizer = TfidfVectorizer(
-                ngram_range=(1, 2),  # Use unigrams and bigrams
-                stop_words=None,     # Don't remove stop words for column names
-                lowercase=True,
-                token_pattern=r'\b\w+\b'
-            )
+    #     try:
+    #         # Create TF-IDF vectors
+    #         vectorizer = TfidfVectorizer(
+    #             ngram_range=(1, 2),  # Use unigrams and bigrams
+    #             stop_words=None,     # Don't remove stop words for column names
+    #             lowercase=True,
+    #             token_pattern=r'\b\w+\b'
+    #         )
             
-            tfidf_matrix = vectorizer.fit_transform(corpus)
+    #         tfidf_matrix = vectorizer.fit_transform(corpus)
             
-            # Calculate similarity between Excel columns and patterns
-            excel_vectors = tfidf_matrix[:len(valid_excel_cols)]
-            pattern_vectors = tfidf_matrix[len(valid_excel_cols):]
+    #         # Calculate similarity between Excel columns and patterns
+    #         excel_vectors = tfidf_matrix[:len(valid_excel_cols)]
+    #         pattern_vectors = tfidf_matrix[len(valid_excel_cols):]
             
-            # Get maximum similarity for each Excel column against all patterns
-            similarities = cosine_similarity(excel_vectors, pattern_vectors)
-            max_similarities = np.max(similarities, axis=1)
+    #         # Get maximum similarity for each Excel column against all patterns
+    #         similarities = cosine_similarity(excel_vectors, pattern_vectors)
+    #         max_similarities = np.max(similarities, axis=1)
             
-            # Find best match above threshold
-            best_idx = np.argmax(max_similarities)
-            best_score = max_similarities[best_idx]
+    #         # Find best match above threshold
+    #         best_idx = np.argmax(max_similarities)
+    #         best_score = max_similarities[best_idx]
             
-            if best_score >= threshold:
-                return valid_original_cols[best_idx], best_score
-            else:
-                return None, best_score
+    #         if best_score >= threshold:
+    #             return valid_original_cols[best_idx], best_score
+    #         else:
+    #             return None, best_score
                 
-        except Exception as e:
-            logging.warning(f"Error in similarity calculation for {target_column}: {e}")
-            return None, 0
+    #     except Exception as e:
+    #         logging.warning(f"Error in similarity calculation for {target_column}: {e}")
+    #         return None, 0
     
     @staticmethod
     def detect_data_boundaries(df):

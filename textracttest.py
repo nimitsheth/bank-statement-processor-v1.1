@@ -298,9 +298,9 @@ def process_pdf(pdf_file):
         csv_output = get_table_csv_results(temp_image_path)
         
         if csv_output:
-            all_csv_output += f"=== PAGE {i+1} ===\n\n"
+            # all_csv_output += f"=== PAGE {i+1} ===\n\n"
             all_csv_output += csv_output
-            all_csv_output += '\n\n'
+            # all_csv_output += '\n\n'
         else:
             print(f"No tables found on page {i+1}")
         
@@ -342,5 +342,5 @@ def main(file_name):
 
 
 if __name__ == "__main__":
-    file_name = "1759430368670.jpg"
+    file_name = "Bank Statement.pdf"
     main(file_name)

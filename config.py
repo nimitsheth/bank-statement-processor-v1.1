@@ -75,6 +75,12 @@ AWS_PROFILE = "nimit_sheth"
 AWS_REGION = "ap-south-1"
 
 # ------------------------
+# Server Configuration
+# ------------------------
+AUTH_SERVER_URL = "http://127.0.0.1:5000/"
+
+
+# ------------------------
 # COLUMN MAPPINGS
 # ------------------------
 # Target patterns for each column type

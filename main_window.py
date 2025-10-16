@@ -13,12 +13,12 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 
-from config import STYLE_SHEET, WINDOW_TITLE, MIN_WINDOW_SIZE, GEMINI_PROMPT
+from config import STYLE_SHEET, WINDOW_TITLE, MIN_WINDOW_SIZE # , GEMINI_PROMPT
 from ui_components import LoaderWidget, WorkerThread
 from file_handler import FileHandler
 from data_processor import DataProcessor
 from textract_service import TextractService
-from gemini_service import GeminiService
+# from gemini_service import GeminiService
 
 
 class BankStatementProcessor(QMainWindow):
@@ -31,7 +31,7 @@ class BankStatementProcessor(QMainWindow):
         self.setStyleSheet(STYLE_SHEET)
         
         # Initialize services
-        self.gemini_service = GeminiService()
+        # self.gemini_service = GeminiService()
         self.textract_service = TextractService()
         self.file_handler = FileHandler()
         self.data_processor = DataProcessor()
@@ -335,7 +335,8 @@ class BankStatementProcessor(QMainWindow):
     def _process_with_textract(self, file_input):
         """Process files using AWS Textract Service service"""
         try:
-            # Get response from Gemini
+            # Get response from Textract
+            # For Gemini integration, uncomment below and comment Textract line
             # csv_text = self.gemini_service.send_to_gemini(file_input, GEMINI_PROMPT)
             csv_text = self.textract_service.process_file(file_input)
             

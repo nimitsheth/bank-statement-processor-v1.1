@@ -7,6 +7,7 @@ import sys
 import logging
 from PyQt6.QtWidgets import QApplication
 from main_window import BankStatementProcessor
+from login_window import LoginWindow
 
 
 def setup_logging():
@@ -27,9 +28,18 @@ def main():
     # Create QApplication
     app = QApplication(sys.argv)
     
-    # Create and show main window
-    window = BankStatementProcessor()
-    window.show()
+    login = LoginWindow()
+    main_window = None
+
+    # When authenticated, create and show main window
+    def on_auth(username):
+        nonlocal main_window
+        logging.info("User logged in: %s", username)
+        main_window = BankStatementProcessor()
+        main_window.show()
+
+    login.authenticated.connect(on_auth)
+    login.show()
     
     # Run application
     sys.exit(app.exec())

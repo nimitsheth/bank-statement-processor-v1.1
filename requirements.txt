@@ -12,7 +12,7 @@ xlrd  # For Excel file handling
 google-generativeai
 
 # ML Library
-scikit-learn
+sentence-transformers
 
 # AWS Textract for OCR
 boto3

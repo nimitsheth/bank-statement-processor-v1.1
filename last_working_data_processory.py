@@ -11,48 +11,148 @@ from io import StringIO
 import re
 import numpy as np
 from PyQt6.QtWidgets import QMessageBox
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
+# from sklearn.feature_extraction.text import TfidfVectorizer
+# from sklearn.metrics.pairwise import cosine_similarity
 from config import TARGET_PATTERNS, ABBREVIATIONS, GENERALIZED_COLUMNS
-import os
-
-# Module-level SBERT initialization
-_sbert_model = None
-_target_embeddings_cache = {}
-_sbert_available = False
-
-def _initialize_sbert():
-    """
-    Initialize SBERT model and cache target pattern embeddings.
-    Called lazily on first use.
-    """
-    global _sbert_model, _target_embeddings_cache, _sbert_available
-    
-    if _sbert_model is not None:
-        return  # Already initialized
-    
-    try:
-        logging.info("Initializing SBERT model...")
-        _sbert_model = SentenceTransformer('all-MiniLM-L6-v2')
-        
-        # Pre-compute embeddings for all target patterns
-        logging.info("Caching embeddings for target patterns...")
-        for target_col, patterns in TARGET_PATTERNS.items():
-            if patterns:
-                embeddings = _sbert_model.encode(patterns, convert_to_tensor=False)
-                _target_embeddings_cache[target_col] = embeddings
-        
-        _sbert_available = True
-        logging.info("✅ SBERT initialized successfully with cached embeddings")
-        
-    except Exception as e:
-        logging.warning(f"⚠️ Failed to initialize SBERT: {e}. Falling back to keyword matching.")
-        _sbert_available = False
 
 
 class DataProcessor:
     """Class for handling all data processing operations"""
     
+    # @staticmethod
+    # def csv_to_dataframe(csv_text):
+    #     """
+    #     Convert CSV text (possibly containing multiple 'Table:' sections)
+    #     into a single pandas DataFrame.
+
+    #     Header detection strategy:
+    #       - In each "Table:" section, look at the first few non-empty lines (e.g. 6).
+    #       - Use csv.reader to split lines (handles quoted commas).
+    #       - Pick the first line with >2 tokens and where tokens contain no digits (primary rule).
+    #       - If not found, fallback to: uppercase-all-tokens heuristic OR reuse last seen header.
+    #     """
+
+    #     if not csv_text or not csv_text.strip():
+    #         raise Exception("Empty CSV text")
+
+    #     # Split into Table: sections
+    #     lines = csv_text.splitlines()
+    #     sections = []
+    #     current = []
+    #     for ln in lines:
+    #         if ln.strip().startswith("Table:"):
+    #             if current:
+    #                 sections.append(current)
+    #             current = [ln]
+    #         else:
+    #             current.append(ln)
+    #     if current:
+    #         sections.append(current)
+
+    #     dfs = []
+    #     last_header = None
+
+    #     def tokens_for_line(line):
+    #         # csv.reader returns list of tokens respecting quotes
+    #         try:
+    #             return next(csv.reader([line]))
+    #         except Exception:
+    #             # fallback naive split
+    #             return [t.strip() for t in line.split(",")]
+
+    #     for sec in sections:
+    #         # remove leading Table: lines and blanks
+    #         sec_lines = [l for l in sec if not l.strip().startswith("Table:")]
+    #         sec_lines = [l for l in sec_lines if l.strip()]
+    #         if not sec_lines:
+    #             continue
+
+    #         # Consider only first N candidate lines for header detection
+    #         N = min(6, len(sec_lines))
+    #         header_idx = None
+
+    #         for i in range(N):
+    #             line = sec_lines[i].strip()
+    #             toks = tokens_for_line(line)
+    #             # require >2 tokens (at least 3 columns)
+    #             if len(toks) <= 2:
+    #                 continue
+
+    #             # primary rule: none of tokens contain a digit
+    #             if not any(re.search(r'\d', t) for t in toks):
+    #                 header_idx = i
+    #                 break
+
+    #             # secondary: tokens mostly alphabetic (allow short numeric tokens like "NO")
+    #             alpha_count = sum(1 for t in toks if re.match(r'^[A-Za-z\.\s]+$', t.strip()))
+    #             if alpha_count >= max(2, len(toks) - 1):
+    #                 header_idx = i
+    #                 break
+
+    #         # fallback uppercase-all-tokens heuristic (common in OCR headers)
+    #         if header_idx is None:
+    #             for i in range(N):
+    #                 toks = tokens_for_line(sec_lines[i])
+    #                 if len(toks) > 2 and all(any(c.isalpha() for c in t) and t.strip() == t.strip().upper() for t in toks if t.strip()):
+    #                     header_idx = i
+    #                     break
+
+    #         # Use last header when header not found
+    #         if header_idx is None:
+    #             if last_header is None:
+    #                 # nothing to do for this section
+    #                 continue
+    #             header = last_header
+    #             data_lines = sec_lines
+    #         else:
+    #             header = sec_lines[header_idx].strip()
+    #             last_header = header
+    #             data_lines = sec_lines[header_idx + 1 :]
+
+    #         # filter out empty and summary/footer lines
+    #         filtered = []
+    #         for l in data_lines:
+    #             s = l.strip()
+    #             if not s:
+    #                 continue
+    #             low = s.lower()
+    #             if low.startswith("page total") or low.startswith("page") or low.startswith("total") or "page total" in low:
+    #                 continue
+    #             filtered.append(l)
+
+    #         if not filtered:
+    #             continue
+
+    #         csv_chunk = "\n".join([header] + filtered)
+    #         # parse with pandas, fallback to manual normalization
+    #         try:
+    #             df_chunk = pd.read_csv(StringIO(csv_chunk), engine="python")
+    #         except Exception:
+    #             reader = csv.reader(StringIO(csv_chunk))
+    #             rows = list(reader)
+    #             if not rows:
+    #                 continue
+    #             header_row = [h.strip() for h in rows[0]]
+    #             ncols = len(header_row)
+    #             normalized = []
+    #             for r in rows[1:]:
+    #                 if len(r) < ncols:
+    #                     r = r + [""] * (ncols - len(r))
+    #                 elif len(r) > ncols:
+    #                     r = r[: ncols - 1] + [",".join(r[ncols - 1 :])]
+    #                 normalized.append([c.strip() for c in r])
+    #             df_chunk = pd.DataFrame(normalized, columns=header_row)
+
+    #         dfs.append(df_chunk)
+
+    #     if not dfs:
+    #         raise Exception("No table data found in CSV text")
+
+    #     df_all = pd.concat(dfs, ignore_index=True, sort=False).fillna("")
+    #     df_all.columns = [str(c).strip() for c in df_all.columns]
+    #     return df_all
+
+
     @staticmethod
     def csv_to_dataframe(csv_text):
         """
@@ -64,12 +164,10 @@ class DataProcessor:
         - Use csv.reader to split lines (handles quoted commas).
         - Pick the first line with >2 tokens and where tokens contain no digits (primary rule).
         - If not found, fallback to: uppercase-all-tokens heuristic OR reuse last seen header.
-        - Map detected headers to generalized format immediately
         - Handle continuation tables with fewer columns by analyzing data patterns.
         """
 
         if not csv_text or not csv_text.strip():
-            logging.error("Empty CSV text received")
             raise Exception("Empty CSV text")
 
         # Split into Table: sections
@@ -87,7 +185,7 @@ class DataProcessor:
             sections.append(current)
 
         dfs = []
-        last_generalized_header = None
+        last_header = None
         last_column_count = 0
 
         def tokens_for_line(line):
@@ -185,71 +283,28 @@ class DataProcessor:
             
             return column_patterns
 
-        def get_reference_patterns(generalized_header_tokens):
+        def get_reference_patterns(header_tokens):
             """
-            Get expected patterns based on generalized column names.
-            Since columns are already mapped to GENERALIZED_COLUMNS format,
-            we know exactly what each column should contain.
+            Get expected patterns based on header column names.
             """
             patterns = []
-            for token in generalized_header_tokens:
+            for token in header_tokens:
                 token_lower = token.lower().strip()
                 
-                # Map generalized columns to their expected patterns
-                if token_lower == 'date':
+                # Date columns
+                if any(kw in token_lower for kw in ['date', 'dt', 'txn date', 'transaction date', 'value date']):
                     patterns.append('date')
-                elif token_lower in ['withdrawal amount', 'deposit amount', 'balance', 'net(cr-dr)']:
+                # Amount columns
+                elif any(kw in token_lower for kw in ['amount', 'withdrawal', 'deposit', 'balance', 'debit', 'credit', 'dr', 'cr']):
                     patterns.append('amount')
-                elif token_lower in ['cheque no', 'ref no', 'instrument no']:
+                # Cheque/reference number (often empty)
+                elif any(kw in token_lower for kw in ['chq', 'cheque', 'ref', 'reference', 'check']):
                     patterns.append('mostly_empty')
-                elif token_lower in ['narration', 'particulars', 'name', 'ledger', 'group']:
-                    patterns.append('text')
-                elif token_lower in ['fy', 'month']:
-                    patterns.append('text')  # Will be computed later
+                # Text columns
                 else:
-                    patterns.append('text')  # Default
+                    patterns.append('text')
             
             return patterns
-
-        def map_header_to_generalized(original_header_tokens):
-            """
-            Map original bank statement header to generalized format.
-            Returns list of generalized column names in same order.
-            """
-            if not original_header_tokens:
-                return []
-            
-            generalized_columns = []
-            used_targets = set()
-            
-            for orig_col in original_header_tokens:
-                # Try to find best match for this column
-                best_match = None
-                best_score = 0
-                
-                for target_col in GENERALIZED_COLUMNS:
-                    if target_col in used_targets:
-                        continue  # Already mapped
-                    
-                    if target_col in TARGET_PATTERNS:
-                        match, score = DataProcessor.find_best_column_match(
-                            [orig_col], target_col, TARGET_PATTERNS[target_col]
-                        )
-                        
-                        if match and score > best_score:
-                            best_match = target_col
-                            best_score = score
-                
-                if best_match and best_score >= 0.35:  # Threshold
-                    generalized_columns.append(best_match)
-                    used_targets.add(best_match)
-                    logging.info(f"  Mapped '{orig_col}' -> '{best_match}' (score: {best_score:.3f})")
-                else:
-                    # No good match found, use a placeholder
-                    generalized_columns.append(f"Unmapped_{orig_col}")
-                    logging.warning(f"  Could not map '{orig_col}' (best score: {best_score:.3f})")
-            
-            return generalized_columns
 
         def align_columns(data_rows, current_patterns, reference_header, reference_patterns):
             """
@@ -352,12 +407,12 @@ class DataProcessor:
             # Process based on whether header was found
             if header_idx is None:
                 # No header detected - continuation table
-                if last_generalized_header is None:
+                if last_header is None:
                     # Can't process without a reference header
                     logging.warning(f"⚠️ Section {sec_idx}: No header detected and no reference header available. Skipping section.")
                     continue
                 
-                generalized_header_tokens = last_generalized_header
+                header = last_header
                 data_lines = sec_lines
                 
                 # Parse data rows
@@ -387,8 +442,9 @@ class DataProcessor:
                     # Analyze current data patterns
                     current_patterns = analyze_column_patterns(parsed_data_rows)
                     
-                    # Get reference patterns from generalized header
-                    reference_patterns = get_reference_patterns(generalized_header_tokens)
+                    # Get reference patterns from last header
+                    reference_header_tokens = tokens_for_line(last_header)
+                    reference_patterns = get_reference_patterns(reference_header_tokens)
                     
                     logging.info(
                         f"ℹ️ Section {sec_idx} patterns: Current={current_patterns}, Reference={reference_patterns}"
@@ -398,45 +454,28 @@ class DataProcessor:
                     aligned_data_rows = align_columns(
                         parsed_data_rows, 
                         current_patterns, 
-                        generalized_header_tokens, 
+                        reference_header_tokens, 
                         reference_patterns
                     )
                     
                     # Create DataFrame with aligned data using csv.writer to preserve quotes
                     output = StringIO()
                     writer = csv.writer(output)
-                    writer.writerow(generalized_header_tokens)
+                    writer.writerow(reference_header_tokens)
                     writer.writerows(aligned_data_rows)
                     csv_chunk = output.getvalue()
                 else:
                     # Same column count - use as is
-                    output = StringIO()
-                    writer = csv.writer(output)
-                    writer.writerow(generalized_header_tokens)
-                    for l in data_lines:
-                        s = l.strip()
-                        if not s:
-                            continue
-                        low = s.lower()
-                        if low.startswith("page total") or low.startswith("page") or low.startswith("total") or "page total" in low:
-                            continue
-                        writer.writerow(tokens_for_line(l))
-                    csv_chunk = output.getvalue()
+                    csv_chunk = "\n".join([last_header] + data_lines)
                 
             else:
                 # Header detected
-                original_header = sec_lines[header_idx].strip()
-                original_header_tokens = tokens_for_line(original_header)
+                header = sec_lines[header_idx].strip()
+                last_header = header
+                header_tokens = tokens_for_line(header)
+                last_column_count = len(header_tokens)
                 
-                logging.info(f"✅ Section {sec_idx}: Header detected with {len(original_header_tokens)} columns")
-                logging.info(f"  Original columns: {original_header_tokens}")
-                
-                # Map to generalized format
-                generalized_header_tokens = map_header_to_generalized(original_header_tokens)
-                last_generalized_header = generalized_header_tokens
-                last_column_count = len(generalized_header_tokens)
-                
-                logging.info(f"  Generalized columns: {generalized_header_tokens}")
+                logging.info(f"✅ Section {sec_idx}: Header detected with {last_column_count} columns: {header_tokens}")
                 
                 data_lines = sec_lines[header_idx + 1 :]
                 
@@ -454,13 +493,7 @@ class DataProcessor:
                 if not filtered:
                     continue
 
-                # Create CSV with generalized header
-                output = StringIO()
-                writer = csv.writer(output)
-                writer.writerow(generalized_header_tokens)
-                for l in filtered:
-                    writer.writerow(tokens_for_line(l))
-                csv_chunk = output.getvalue()
+                csv_chunk = "\n".join([header] + filtered)
 
             # Parse CSV chunk with pandas
             try:
@@ -489,16 +522,6 @@ class DataProcessor:
 
         df_all = pd.concat(dfs, ignore_index=True, sort=False).fillna("")
         df_all.columns = [str(c).strip() for c in df_all.columns]
-        
-        # Ensure all required generalized columns exist
-        for col in GENERALIZED_COLUMNS:
-            if col not in df_all.columns:
-                df_all[col] = ""
-        
-        # Reorder to match GENERALIZED_COLUMNS
-        existing_cols = [col for col in GENERALIZED_COLUMNS if col in df_all.columns]
-        df_all = df_all[existing_cols]
-        
         return df_all
     
     @staticmethod
@@ -551,88 +574,69 @@ class DataProcessor:
         return ' '.join(expanded_words)
     
     @staticmethod
-    def find_best_column_match(excel_columns, target_column, patterns, threshold=0.5):
+    def find_best_column_match(excel_columns, target_column, patterns, threshold=0.35):
         """
-        Find best matching Excel column for a target column using SBERT embeddings
-        with keyword-based fallback
+        Find best matching Excel column for a target column using cosine similarity
         
         Args:
             excel_columns (list): List of Excel column names
             target_column (str): Target column name we're trying to match
             patterns (list): List of pattern strings for the target column
-            threshold (float): Minimum similarity threshold (default 0.5 for SBERT)
+            threshold (float): Minimum similarity threshold
             
         Returns:
             tuple: (best_match_column, similarity_score) or (None, 0) if no match
         """
-        if not excel_columns or not target_column or not patterns:
-            return None, 0
+        return None, 0  # Placeholder for actual implementation
+    #     if not target_column or not patterns:
+    #     if not excel_columns:
+    #         return None, 0
         
-        # Initialize SBERT if not already done
-        _initialize_sbert()
+    #     # Preprocess Excel columns
+    #     processed_excel_cols = [DataProcessor.preprocess_column_name(col) for col in excel_columns]
         
-        # Try SBERT-based matching first
-        if _sbert_available:
-            try:
-                # Get cached embeddings for target patterns
-                if target_column in _target_embeddings_cache:
-                    pattern_embeddings = _target_embeddings_cache[target_column]
-                else:
-                    # Compute if not cached (shouldn't happen but be safe)
-                    pattern_embeddings = _sbert_model.encode(patterns, convert_to_tensor=False)
-                
-                # Encode Excel column names
-                excel_embeddings = _sbert_model.encode(excel_columns, convert_to_tensor=False)
-                
-                # Calculate cosine similarity between each Excel column and all patterns
-                similarities = cosine_similarity(excel_embeddings, pattern_embeddings)
-                
-                # Get maximum similarity for each Excel column
-                max_similarities = np.max(similarities, axis=1)
-                
-                # Find best match
-                best_idx = np.argmax(max_similarities)
-                best_score = max_similarities[best_idx]
-                
-                if best_score >= threshold:
-                    logging.debug(f"SBERT match: '{excel_columns[best_idx]}' -> '{target_column}' (score: {best_score:.3f})")
-                    return excel_columns[best_idx], best_score
-                else:
-                    logging.debug(f"SBERT: No match for '{target_column}' above threshold (best: {best_score:.3f})")
-                    
-            except Exception as e:
-                logging.warning(f"SBERT matching failed for '{target_column}': {e}. Using fallback.")
+    #     # Filter out empty column names
+    #     valid_indices = [i for i, col in enumerate(processed_excel_cols) if col.strip()]
+    #     if not valid_indices:
+    #         return None, 0
         
-        # Fallback: Simple keyword-based matching
-        logging.debug(f"Using keyword fallback for '{target_column}'")
-        best_match = None
-        best_score = 0
+    #     valid_excel_cols = [processed_excel_cols[i] for i in valid_indices]
+    #     valid_original_cols = [excel_columns[i] for i in valid_indices]
         
-        for excel_col in excel_columns:
-            excel_col_lower = str(excel_col).lower().strip()
+    #     # Create corpus: Excel columns + target patterns
+    #     corpus = valid_excel_cols + patterns
+        
+    #     try:
+    #         # Create TF-IDF vectors
+    #         vectorizer = TfidfVectorizer(
+    #             ngram_range=(1, 2),  # Use unigrams and bigrams
+    #             stop_words=None,     # Don't remove stop words for column names
+    #             lowercase=True,
+    #             token_pattern=r'\b\w+\b'
+    #         )
             
-            # Check if any pattern keyword is in the column name
-            for pattern in patterns:
-                pattern_lower = pattern.lower().strip()
-                pattern_words = pattern_lower.split()
+    #         tfidf_matrix = vectorizer.fit_transform(corpus)
+            
+    #         # Calculate similarity between Excel columns and patterns
+    #         excel_vectors = tfidf_matrix[:len(valid_excel_cols)]
+    #         pattern_vectors = tfidf_matrix[len(valid_excel_cols):]
+            
+    #         # Get maximum similarity for each Excel column against all patterns
+    #         similarities = cosine_similarity(excel_vectors, pattern_vectors)
+    #         max_similarities = np.max(similarities, axis=1)
+            
+    #         # Find best match above threshold
+    #         best_idx = np.argmax(max_similarities)
+    #         best_score = max_similarities[best_idx]
+            
+    #         if best_score >= threshold:
+    #             return valid_original_cols[best_idx], best_score
+    #         else:
+    #             return None, best_score
                 
-                # Count how many pattern words are in the Excel column
-                matches = sum(1 for word in pattern_words if word in excel_col_lower)
-                
-                if matches > 0:
-                    # Simple scoring: ratio of matched words
-                    score = matches / len(pattern_words)
-                    if score > best_score:
-                        best_score = score
-                        best_match = excel_col
-        
-        # Lower threshold for keyword matching (0.3 instead of 0.5)
-        keyword_threshold = 0.3
-        if best_match and best_score >= keyword_threshold:
-            logging.debug(f"Keyword match: '{best_match}' -> '{target_column}' (score: {best_score:.3f})")
-            return best_match, best_score
-        
-        return None, best_score
+    #     except Exception as e:
+    #         logging.warning(f"Error in similarity calculation for {target_column}: {e}")
+    #         return None, 0
     
     @staticmethod
     def detect_data_boundaries(df):
@@ -753,7 +757,7 @@ class DataProcessor:
     @staticmethod
     def flexible_column_mapping(df):
         """
-        Flexibly map DataFrame columns to standardized format using SBERT similarity
+        Flexibly map DataFrame columns to standardized format using cosine similarity
         
         Args:
             df (pd.DataFrame): Input DataFrame
@@ -953,7 +957,7 @@ class DataProcessor:
         Returns:
             str: Financial year in YYYY-YYYY format
         """
-        if pd.isna(date_str) or not date_str:
+        if pd.isna(date_str):
             return ""
         
         try:
@@ -980,9 +984,6 @@ class DataProcessor:
         Returns:
             int: Month number (1-12) or empty string if error
         """
-        if pd.isna(date_str) or not date_str:
-            return ""
-        
         try:
             return pd.to_datetime(date_str, format="%d-%m-%Y").month
         except:

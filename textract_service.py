@@ -97,14 +97,14 @@ class TextractService:
     def _generate_table_csv(table_result, blocks_map, table_index):
         rows, scores = TextractService._get_rows_columns_map(table_result, blocks_map)
 
-        # table_id = 'Table_' + str(table_index)
+        table_id = 'Table_' + str(table_index)
         
         # Use StringIO to properly write CSV
         output = io.StringIO()
         writer = csv.writer(output, quoting=csv.QUOTE_MINIMAL)
         
         # Write table header
-        # output.write('Table: {0}\n\n'.format(table_id))
+        output.write('Table: {0}\n\n'.format(table_id))
         
         # Write table data
         for row_index in sorted(rows.keys()):

@@ -340,8 +340,8 @@ class BankStatementProcessor(QMainWindow):
             csv_text = self.textract_service.process_file(file_input)
             
             # Parse CSV text into DataFrame
-            df = None
-            # df = self.data_processor.csv_to_dataframe(csv_text)
+            # df = None
+            df = self.data_processor.csv_to_dataframe(csv_text)
             return df
             
         except Exception as e:
